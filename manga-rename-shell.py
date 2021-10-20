@@ -39,6 +39,17 @@ class RenameShell(cmd.Cmd):
 
         self._reload()
 
+    def complete_cd(self, text, line, begidx, endidx):
+        text = text.strip()
+
+        entries = []
+
+        for (original, _) in self.renames:
+            if (original.startswith(text)):
+                entries.append(original)
+
+        return entries
+
     def do_bulk(self, arg):
         arg = arg.strip()
         if (arg == ''):
