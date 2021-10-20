@@ -4,7 +4,6 @@ import argparse
 import cmd
 import os
 import re
-import readline
 import shutil
 import sys
 
@@ -39,17 +38,6 @@ class RenameShell(cmd.Cmd):
 
         self._reload()
 
-    def complete_cd(self, text, line, begidx, endidx):
-        text = text.strip()
-
-        entries = []
-
-        for (original, _) in self.renames:
-            if (original.startswith(text)):
-                entries.append(original)
-
-        return entries
-
     def do_bulk(self, arg):
         arg = arg.strip()
         if (arg == ''):
@@ -72,13 +60,28 @@ class RenameShell(cmd.Cmd):
 
     def do_cd(self, arg):
         arg = arg.strip()
+        path = None
 
-        path = arg
-        if (not os.path.isabs(path)):
-            path = os.path.join(self.basePath, path)
+        if (re.match(r'^\d+$', arg)):
+            index, _ = self._parseIndex(arg)
+            path = os.path.join(self.basePath, self.renames[index][0])
+        else:
+            path = arg
+            if (not os.path.isabs(path)):
+                path = os.path.join(self.basePath, path)
+
+        if (not os.path.exists(path)):
+            print('ERROR: Directory does not exist: %s' % (path))
+            return
+
+        if (not os.path.isdir(path)):
+            print('ERROR: Path is not a directory: %s' % (path))
+            return
 
         self.basePath = os.path.abspath(path)
         self.baseName = os.path.basename(self.basePath)
+        self.dirType = TYPE_NONE
+        self.prompt = "%s > " % (self.basePath)
 
         self._reload()
 
