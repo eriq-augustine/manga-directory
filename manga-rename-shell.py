@@ -40,12 +40,11 @@ class RenameShell(cmd.Cmd):
         self._reload()
 
     def do_bulk(self, arg):
-        arg = arg.strip()
-        if (arg == ''):
-            print('ERROR: Found no pattern for bulk rename.')
-            return
+        pattern = arg.strip()
+        if (pattern == ''):
+            pattern = None
 
-        self._reload(numberRegex = arg)
+        self._reload(numberRegex = pattern)
 
     def do_cd(self, arg):
         arg = arg.strip()
@@ -53,6 +52,8 @@ class RenameShell(cmd.Cmd):
 
         if (re.match(r'^\d+$', arg)):
             index, _ = self._parseIndex(arg)
+            if (index == None):
+                return
             path = os.path.join(self.basePath, self.renames[index][0])
         else:
             path = arg
@@ -101,6 +102,7 @@ class RenameShell(cmd.Cmd):
         print('           The pattern must capture the context number in the first capture group.')
         print('           re.search is used.')
         print('           On a failed match, no change will be made to the entry.')
+        print('           If no pattern is supplied, the natural ordering of entries will be used for numbers.')
         print('           Even entries marked for ignore or deletion will get their rename changed, but their action will remain.')
         print('cd       - Chance the current working directory.')
         print('rm       - Delete a single entry from disk.')
@@ -114,7 +116,7 @@ class RenameShell(cmd.Cmd):
         print('write    - Write all the renames to disk and quit interactive mode.')
 
     def do_ls(self, arg):
-        print("%s (%s)" % (self.basePath, self.dirType))
+        print("%s (Type: %s)" % (self.basePath, self.dirType))
 
         for i in range(len(self.renames)):
             action = self.actions[i]
@@ -166,6 +168,7 @@ class RenameShell(cmd.Cmd):
 
     def do_write(self, arg):
         self._commit()
+        self._reload()
         print('Renames committed to disk.')
 
     def do_EOF(self, arg):
@@ -194,12 +197,13 @@ class RenameShell(cmd.Cmd):
 
         number, highestNumber = self._parseAndPad(backupNumber)
 
-        matches = re.findall(numberRegex, original)
-        if (matches is not None and len(matches) > 0):
-            number, highestNumber = self._parseAndPad(matches[-1][0])
+        if (numberRegex is not None):
+            matches = re.findall(numberRegex, original)
+            if (matches is not None and len(matches) > 0):
+                number, highestNumber = self._parseAndPad(matches[-1][0])
 
         if (number is None):
-            return original, None
+            return original, backupNumber
 
         if (self.dirType == TYPE_NONE):
             return original, highestNumber
@@ -283,7 +287,7 @@ def _load_args(args):
     parser = argparse.ArgumentParser(description = 'Interactively edit managa directories.')
 
     parser.add_argument('path',
-            metavar = 'PATH', type = str, nargs = 1,
+            default = '.', metavar = 'PATH', type = str, nargs = '?',
             help = 'a directory')
 
     return parser.parse_args()
